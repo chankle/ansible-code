@@ -1,0 +1,46 @@
+---
+# Example of usage:
+# ansible-playbook -i inventory /maven_install.yml -e "server=JENKINS01"
+
+- hosts: "{{ server }}"
+  become: true
+  become_method: sudo
+
+  vars:
+    download_link: http://www-eu.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz
+    download_dest: "/tmp/apache-maven-bin.tar.gz"
+    
+    md5_file: https://www.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz.md5
+    md5_file_dest: /tmp/apache-maven-bin.md5
+
+    maven_install_dir: /opt/
+
+  tasks:
+
+
+
+    # Using curl over get_url because it's easier to get to work with https
+  - name: Download md5 file
+    shell: /usr/bin/curl https://www.apache.org/dist/maven/maven-3/3.5.0/binaries/apache-maven-3.5.0-bin.tar.gz.md5 > {{ md5_file_dest }}
+
+
+  - shell: /bin/cat  {{ md5_file_dest }} 
+    register: md5_value
+
+
+  - name: Download maven tar file
+    get_url:
+      url:  "{{ download_link }}"
+      dest: "{{ download_dest }}"
+      checksum: "md5:{{ md5_value.stdout }}"
+
+
+  - name: Unarchive downloaded file
+    unarchive:
+      src: "{{ download_dest }}"
+      dest: "{{ maven_install_dir }}"
+      copy: no
+      owner: root
+      group: root
+      mode: 'go-w'
+

@@ -1,0 +1,22 @@
+---
+
+# Example of a playbook to retrieve files from a server behind a jumphost to a local directory.
+# The keywords are "files" and "jumphost". 
+# The synchronize module does not appear to work for servers behind jumphosts.
+# This method should work for a moderate number of files. Not advisable for extreme number of files.
+
+- hosts: "{{ server }}"
+  become: true
+  become_method: sudo
+  gather_facts: false
+
+  tasks:
+
+       # Use find command to list all the files in a certain directory
+     - shell: find /etc/ha.d/ -type f
+       register: files_to_copy
+
+       # Use the fetch module to retrieve.
+     - fetch: src={{ item }}  dest=/tmp/ansible_stuff/
+       with_items: "{{ files_to_copy.stdout_lines }}"
+

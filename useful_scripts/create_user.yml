@@ -1,0 +1,51 @@
+---
+# Example of usage:
+#   ansible-playbook -i inventory_file create_user.yml -e "server=server01 user_name=alex public_key_file=/path/to/dir/id_rsa.pub add_sudo=yes"
+# or
+#    ansible-playbook -i inventory_file create_user.yml   (and just reply to the prompts)
+#
+# or a bit mix of both.
+
+- hosts: "{{ server }}"
+  become: true
+  become_method: sudo
+  gather_facts: false
+
+  vars_prompt:
+  
+     - name: "server"
+       prompt: "Enter server (or group)"
+       private: no
+
+     - name: "user_name"
+       prompt: "Enter user name"
+       private: no
+
+     - name: "public_key_file"
+       prompt: "Enter public key file path (absolute, not relative)"
+       private: no
+
+     - name: "add_sudo"
+       prompt: "Add to sudoers? (Enter 'yes' if want to) "
+       private: no
+       default: no
+
+
+  tasks:
+    - name: create user group with same name with user name
+      group: name={{ user_name }} state=present
+
+    - name: create user
+      user: name={{ user_name }} state=present 
+
+    - name: add public key to authorized_key
+      authorized_key: user={{ user_name }} key="{{ lookup('file', public_key_file) }}"
+
+    - name: Add user to sudoers
+      lineinfile:
+        name: /etc/sudoers
+        state: present
+        regexp: '^{{ user_name }} ALL='
+        line: '{{ user_name }} ALL=(ALL) NOPASSWD: ALL'
+        validate: 'visudo -cf %s'
+      when: add_sudo=="yes"
